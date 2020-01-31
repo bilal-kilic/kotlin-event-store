@@ -3,11 +3,8 @@ package com.example.domain
 import com.example.domain.aliases.ContentId
 import com.example.domain.aliases.ProductId
 import com.example.domain.aliases.VariantId
-import com.example.domain.events.ContentAddedToProduct
-import com.example.domain.events.ProductCreated
-import com.example.domain.events.VariantAddedToContent
+import com.example.domain.events.*
 import com.example.infra.BusinessException
-import java.util.*
 
 class Product(
     val id: ProductId
@@ -25,26 +22,59 @@ class Product(
         this.register<VariantAddedToContent>(this::apply)
         this.register<ContentAddedToProduct>(this::apply)
         this.register<ProductCreated>(this::apply)
+        this.register<MediaAddedToVariant>(this::apply)
+        this.register<DescriptionChanged>(this::apply)
+        this.register<BrandChanged>(this::apply)
+        this.register<CategoryChanged>(this::apply)
+        this.register<SlicerChanged>(this::apply)
     }
 
     private val contents: HashSet<Content> = hashSetOf()
 
     private val attributes: HashSet<Attribute> = hashSetOf()
 
-    fun getContents() = contents.toList()
-
+    //region Product
     fun getAttributes() = attributes.toList()
+
+    fun changeBrand(brand: Brand) = raiseEvent(BrandChanged(brand.id, brand.name))
+
+    fun changeCategory(category: Category) = raiseEvent(CategoryChanged(category.id, category.name))
+
+    //endregion
+
+    //region Content
+    fun getContents() = contents.toList()
 
     fun addContent(id: ContentId, description: String, slicerAttribute: Attribute) {
         if (contents.any()) {
             validate(contents.any { it.slicerAttribute.id == slicerAttribute.id }) { "Content must have the same slicer type as existing contents" }
         }
 
-        validate(contents.all { it.slicerAttribute != slicerAttribute }) { "Another content with given slicer exists" }
+        validate(contents.none { it.slicerAttribute == slicerAttribute }) { "Another content with given slicer exists" }
 
         raiseEvent(ContentAddedToProduct(id, description, slicerAttribute.id, slicerAttribute.valueId))
     }
 
+    fun changeDescription(id: ContentId, description: String) {
+        val content = contents.firstOrNull { it.id == id }
+
+        validate(content != null) { "Content not found" }
+
+        raiseEvent(DescriptionChanged(id, description))
+    }
+
+    fun changeSlicer(id: ContentId, slicerAttribute: Attribute) {
+        val content = contents.firstOrNull { it.id == id }
+
+        validate(content != null) { "Content not found" }
+
+        validate(this.getContents().none { it.slicerAttribute == slicerAttribute }) { "Another content with given slicer exists" }
+
+        raiseEvent(SlicerChanged(id, slicerAttribute.id, slicerAttribute.valueId))
+    }
+    //endregion
+
+    //region Variant
     fun addVariant(id: VariantId, barcode: String, slicerAttribute: Attribute, varianterAttribute: Attribute) {
         val content = contents.firstOrNull { it.slicerAttribute.id == slicerAttribute.id }
             ?: throw BusinessException("Content not found")
@@ -59,13 +89,35 @@ class Product(
         raiseEvent(VariantAddedToContent(id, content.id, barcode, varianterAttribute.id, varianterAttribute.valueId))
     }
 
+    fun addMedia(id: VariantId, media: Media) {
+        val variant = contents.flatMap { it.getVariants() }.firstOrNull()
+
+        validate(variant != null) { "Variant not found" }
+
+        raiseEvent(MediaAddedToVariant(id, media.path, media.order))
+    }
+    //endregion
+
+    //region Domain Event Appliers
     private fun apply(event: VariantAddedToContent) {
         val content = contents.first { it.id == event.contentId }
-        content.addVariant(Variant(event.id, event.barcode, Attribute(event.varianterAttributeId, event.varianterAttributeValueId)))
+        content.addVariant(
+            Variant(
+                event.id,
+                event.barcode,
+                Attribute(event.varianterAttributeId, event.varianterAttributeValueId)
+            )
+        )
     }
 
     private fun apply(event: ContentAddedToProduct) {
-        contents.add(Content(event.id, event.description, Attribute(event.slicerAttributeId, event.slicerAttributeValueId)))
+        contents.add(
+            Content(
+                event.id,
+                event.description,
+                Attribute(event.slicerAttributeId, event.slicerAttributeValueId)
+            )
+        )
     }
 
     private fun apply(event: ProductCreated) {
@@ -73,6 +125,31 @@ class Product(
         this.brand = event.brand
         this.category = event.category
     }
+
+    private fun apply(event: MediaAddedToVariant) {
+        val variant = contents.flatMap { it.getVariants() }.first()
+
+        variant.addImage(Media(event.path, event.order))
+    }
+
+    private fun apply(event: DescriptionChanged) {
+        val content = contents.first { it.id == event.id }
+        content.description = event.description
+    }
+
+    private fun apply(event: BrandChanged) {
+        this.brand = Brand(event.id, event.name)
+    }
+
+    private fun apply(event: CategoryChanged) {
+        category = Category(event.id, event.name)
+    }
+
+    private fun apply(event: SlicerChanged) {
+        val content = contents.first { it.id == event.contenId }
+        content.slicerAttribute = Attribute(event.id, event.valueId)
+    }
+    //endregion
 
     companion object {
         fun from(id: ProductId, events: Collection<Any>): Product =

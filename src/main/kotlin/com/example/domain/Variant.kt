@@ -8,8 +8,8 @@ class Variant(
     val barcode: String,
     val varianterAttribute: Attribute
 ) {
-    private val images: HashSet<Image> = hashSetOf()
+    private val medias: HashSet<Media> = hashSetOf()
 
-    fun addImage(image: Image) = images.add(image)
-    fun getImages() = images.toList()
+    fun addImage(media: Media) = medias.add(media)
+    fun getImages() = medias.toList()
 }
