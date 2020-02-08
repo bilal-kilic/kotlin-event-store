@@ -1,4 +1,4 @@
-package test.kotlin
+package com.example
 
 import com.example.domain.Attribute
 import com.example.domain.Brand

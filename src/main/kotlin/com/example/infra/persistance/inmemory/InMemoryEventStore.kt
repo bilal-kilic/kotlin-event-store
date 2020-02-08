@@ -16,6 +16,10 @@ class InMemoryEventStore : IEventStore {
         return events.sortedBy { it.version }.map { it.eventData }
     }
 
+    override suspend fun getEventForAggregateAsync(id: UUID): List<Any> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
     override fun save(aggregateId: UUID, events: List<Any>, currentVersion: Int) {
         var existingEvents = eventStore[aggregateId]
 
@@ -33,5 +37,9 @@ class InMemoryEventStore : IEventStore {
 
             //Can publish event for subscribers
         }
+    }
+
+    override suspend fun saveAsync(aggregateId: UUID, events: List<Any>, currentVersion: Int) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 }

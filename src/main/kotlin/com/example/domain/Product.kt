@@ -14,7 +14,7 @@ class Product(
     private lateinit var brand: Brand
     private lateinit var category: Category
 
-    constructor(productId: ProductId, code: String, brand: Brand, category: Category) : this(productId) {
+    constructor(productId: ProductId = ProductId.randomUUID(), code: String, brand: Brand, category: Category) : this(productId) {
         this.raiseEvent(ProductCreated(code, brand, category))
     }
 

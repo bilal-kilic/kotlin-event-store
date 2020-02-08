@@ -1,7 +1,7 @@
 package com.example
 
-import com.example.application.CreateProductCommand
-import com.example.application.GetProductQuery
+import com.example.application.commands.CreateProductCommand
+import com.example.application.queries.GetProductQuery
 import com.example.infra.diModule
 import com.trendyol.kediatr.CommandBus
 import io.ktor.application.Application

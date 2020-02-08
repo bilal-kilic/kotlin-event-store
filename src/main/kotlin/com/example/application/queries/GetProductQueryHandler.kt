@@ -1,5 +1,6 @@
-package com.example.application
+package com.example.application.queries
 
+import com.example.application.queries.GetProductQuery
 import com.trendyol.kediatr.AsyncQueryHandler
 import com.example.domain.Product
 import com.example.domain.persistance.IProductRepository
